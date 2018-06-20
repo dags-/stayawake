@@ -10,6 +10,7 @@ import (
 	"runtime"
 	"strings"
 	"time"
+	"os"
 )
 
 func main() {
@@ -17,6 +18,7 @@ func main() {
 	port := getPort()
 	mp3 := fmt.Sprintf(`http://%s:%s/noise.mp3`, ip, port)
 	go serveFiles(ip, port)
+	go handleStop()
 	monitor(mp3)
 }
 
@@ -50,6 +52,16 @@ func serveFiles(ip, port string) {
 	u := fmt.Sprintf(`%s:%s`, ip, port)
 	h := http.FileServer(http.Dir("audio"))
 	http.ListenAndServe(u, h)
+}
+
+func handleStop() {
+	s := bufio.NewScanner(os.Stdin)
+	for s.Scan() {
+		in := s.Text()
+		if in == "stop" {
+			os.Exit(0)
+		}
+	}
 }
 
 func monitor(mp3 string) {
