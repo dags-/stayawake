@@ -9,14 +9,14 @@ import (
 	"strings"
 	"time"
 	"os"
+	"path/filepath"
 )
 
-var (
-	// get the cast command depending on os/arch
-	command = getCommand()
-)
+// get the cast command depending on os/arch
+var command = getCommand()
 
 func init() {
+	Log("detected ", command)
 	if runtime.GOOS != "windows" {
 		e := os.Chmod(command, os.ModePerm)
 		if e != nil {
@@ -89,6 +89,7 @@ func Play(device, mp3 string) (error) {
 	if e != nil {
 		return e
 	}
+
 	return c.Wait()
 }
 
@@ -97,13 +98,31 @@ func Log(message ...interface{}) {
 }
 
 func getCommand() string {
+	b := getBinary()
+	if exists(b) {
+		return b
+	}
+
+	x, e := os.Executable()
+	if e != nil {
+		panic(e)
+	}
+
+	p :=  filepath.Join(filepath.Dir(x), b)
+	if exists(p) {
+		return p
+	}
+
+	panic(errors.New("file does not exist: " + p))
+}
+
+func getBinary() string {
 	switch runtime.GOOS {
 	case "darwin":
 		return "_bin/cast-mac-amd64.dms"
 	case "windows":
 		return "_bin/cast-windows-amd64.exe"
 	case "linux":
-		// rasp pi
 		if runtime.GOARCH == "arm" {
 			return "_bin/cast-linux-arm.dms"
 		}
@@ -111,4 +130,9 @@ func getCommand() string {
 	}
 	// can't run on this platform
 	panic(errors.New("unsupported platform"))
+}
+
+func exists(path string) bool {
+	_, e := os.Stat(path)
+	return e == nil
 }
