@@ -2,59 +2,175 @@ package main
 
 import (
 	"bufio"
-	"errors"
+	"encoding/json"
 	"fmt"
+	"io/ioutil"
 	"net"
 	"net/http"
-	"os/exec"
-	"runtime"
-	"strings"
-	"time"
 	"os"
+	"strings"
+	"sync"
+	"time"
+
+	"github.com/dags-/stayawake/cast"
+)
+
+type Config struct {
+	Port    string   `json:"port"`
+	Devices []string `json:"devices"`
+}
+
+var (
+	noise = ""
+	cfg   = loadCfg()
+	lock  = sync.RWMutex{}
 )
 
 func main() {
-	ip := getIp()
-	port := getPort()
-	mp3 := fmt.Sprintf(`http://%s:%s/noise.mp3`, ip, port)
-	go serveFiles(ip, port)
-	go handleStop()
-	monitor(mp3)
+	host := host() // hostname/ip address
+	port := port() // server port
+	addr := fmt.Sprintf(`http://%s:%s`, host, port)
+	noise = addr + "/noise.mp3"
+	cast.Log("server running on: ", addr)
+	go serve(host, port)
+	go handleInput()
+	runLoop()
 }
 
-func log(message string) {
-	fmt.Println(time.Now().Format(time.Stamp), ":", message)
-}
+func runLoop() {
+	for {
+		// read device names from config
+		lock.Lock()
+		devices := cfg.Devices
+		lock.Unlock()
 
-func doPanic(e error) {
-	if e != nil {
-		panic(e)
+		// start monitor task for each device
+		wg := sync.WaitGroup{}
+		for _, device := range devices {
+			wg.Add(1)
+			go monitor(device, wg)
+		}
+
+		// wait until all tasks complete
+		t := time.Now()
+		wg.Wait()
+
+		// sleep for remaining time
+		d := time.Since(t)
+		r := time.Minute - d
+		if r.Seconds() > 0 {
+			time.Sleep(r)
+		}
 	}
 }
 
-func getIp() string {
+func monitor(device string, wg sync.WaitGroup) {
+	defer wg.Done()
+
+	// get status from the device
+	s, e := cast.GetStatus(device)
+	if e != nil {
+		cast.Log(e)
+		return
+	}
+
+	// cast the noise file if nothing else is playing
+	if s == "no applications running" {
+		cast.Play(device, noise)
+	}
+}
+
+func host() string {
+	n, e := os.Hostname()
+	if e == nil {
+		return n + ".local"
+	}
 	conn, e := net.Dial("udp", "8.8.8.8:80")
-	doPanic(e)
+	if e != nil {
+		panic(e)
+	}
 	defer conn.Close()
 	localAddr := conn.LocalAddr().(*net.UDPAddr)
 	return localAddr.IP.String()
 }
 
-func getPort() string {
-	l, e := net.Listen("tcp", "127.0.0.1:0")
-	doPanic(e)
+func port() string {
+	lock.Lock()
+	defer lock.Unlock()
+	add := fmt.Sprintf("127.0.0.1:%s", cfg.Port)
+	l, e := net.Listen("tcp", add)
+	if e != nil {
+		panic(e)
+	}
 	defer l.Close()
 	parts := strings.Split(l.Addr().String(), ":")
 	return parts[1]
 }
 
-func serveFiles(ip, port string) {
-	u := fmt.Sprintf(`%s:%s`, ip, port)
-	h := http.FileServer(http.Dir("audio"))
-	http.ListenAndServe(u, h)
+func loadCfg() *Config {
+	cast.Log("loading config")
+	var c Config
+	d, e := ioutil.ReadFile("config.json")
+	if e == nil {
+		e = json.Unmarshal(d, &c)
+		if e == nil {
+			return &c
+		}
+	}
+	cast.Log(e)
+	c = Config{Devices: []string{}, Port: "0"}
+	saveCfg(&c)
+	return &c
 }
 
-func handleStop() {
+func saveCfg(c *Config) {
+	cast.Log("saving config")
+	d, e := json.MarshalIndent(c, "", "  ")
+	if e != nil {
+		cast.Log(e)
+		return
+	}
+	e = ioutil.WriteFile("config.json", d, os.ModePerm)
+	if e != nil {
+		cast.Log(e)
+	}
+}
+
+func serve(ip, port string) {
+	addr := fmt.Sprintf(`%s:%s`, ip, port)
+	fs := http.FileServer(http.Dir("_web"))
+	m := http.NewServeMux()
+	m.HandleFunc("/config", handleConfig)
+	m.Handle("/", fs)
+	http.ListenAndServe(addr, m)
+}
+
+func handleConfig(w http.ResponseWriter, r *http.Request) {
+	if r.Method == "GET" {
+		cast.Log("received config GET request")
+		lock.Lock()
+		defer lock.Unlock()
+		w.Header().Set("Content-Type", "application/json")
+		e := json.NewEncoder(w).Encode(cfg)
+		if e != nil {
+			cast.Log(e)
+		}
+	} else if r.Method == "POST" && r.Header.Get("Content-Type") == "application/json" {
+		cast.Log("received config POST request")
+		lock.Lock()
+		defer lock.Unlock()
+		e := json.NewDecoder(r.Body).Decode(cfg)
+		if e != nil {
+			cast.Log(e)
+		} else {
+			saveCfg(cfg)
+		}
+	} else {
+		cast.Log("rejected ", r.Method, " request from ", r.RemoteAddr)
+	}
+}
+
+func handleInput() {
 	s := bufio.NewScanner(os.Stdin)
 	for s.Scan() {
 		in := s.Text()
@@ -62,67 +178,4 @@ func handleStop() {
 			os.Exit(0)
 		}
 	}
-}
-
-func monitor(mp3 string) {
-	for {
-		log("monitoring cast audio")
-		s := getStatus()
-		if s == "No applications running" {
-			play(mp3)
-		}
-		time.Sleep(time.Minute)
-	}
-}
-
-func play(mp3 string) {
-	log("casting wakeup noise")
-	c := exec.Command(getCommand(), "--name", "Eneby", "media", "play", mp3)
-	e := c.Start()
-
-	time.Sleep(time.Second * 10)
-
-	if getStatus() == "[Default Media Receiver] Default Media Receiver" {
-		log("wakeup complete")
-		c = exec.Command(getCommand(), "--name", "Eneby", "quit")
-		e = c.Start()
-		doPanic(e)
-	} else {
-		log("wakeup interrupted")
-	}
-}
-
-func getStatus() string {
-	for {
-		c := exec.Command(getCommand(), "--name", "Eneby", "status")
-		o, e := c.StdoutPipe()
-		doPanic(e)
-
-		s := bufio.NewScanner(o)
-		e = c.Start()
-		doPanic(e)
-
-		for s.Scan() {
-			if s.Text() == "Connected" && s.Scan() {
-				return s.Text()
-			}
-		}
-
-		time.Sleep(5 * time.Second)
-	}
-}
-
-func getCommand() string {
-	switch runtime.GOOS {
-	case "darwin":
-		return "./bin/cast-mac-amd64.dms"
-	case "windows":
-		return "./bin/cast-windows-amd64.exe"
-	case "linux":
-		if runtime.GOARCH == "arm" {
-			return "./bin/cast-linux-arm.dms"
-		}
-		return "./bin/cast-linux-amd64.dms"
-	}
-	panic(errors.New("unsupported platform"))
 }
