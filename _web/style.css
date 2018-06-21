@@ -1,0 +1,44 @@
+body {
+    width: 90%;
+    height: 100%;
+    margin: auto;
+    padding: 0;
+    font-size: 18px;
+    font-weight: lighter;
+    font-family: sans-serif;
+    color: #555555;
+}
+.content {
+    padding: 20px;
+    min-width: 360px;
+    background: #fafafa;
+}
+.content form {
+    display: flex;
+    text-align: center;
+}
+.content form input {
+    font-size: 18px;
+    font-weight: lighter;
+    padding: 10px 20px;
+}
+.device {
+    padding: 10px 20px;
+    font-size: 18px;
+    font-weight: lighter;
+    border-bottom: 1px solid #dddddd;
+    background: #ffffff;
+    transition: background .2s;
+}
+.device:nth-child(even) {
+    background: #f4f4f4;
+}
+.device:hover {
+    box-shadow: 0 0 5px 0 rgba(0, 0, 0, 0.1);
+}
+.device div {
+    float: right;
+    display: inline;
+    color: #555555;
+    cursor: pointer;
+}

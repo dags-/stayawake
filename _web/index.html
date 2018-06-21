@@ -2,55 +2,10 @@
 <head>
     <meta charset="UTF-8">
     <title>StayAwake/config</title>
-    <style>
-        body {
-            width: 90%;
-            height: 100%;
-            margin: auto;
-            padding: 0;
-            font-size: 18px;
-            font-weight: lighter;
-            font-family: sans-serif;
-            color: #555555;
-        }
-        .content {
-            padding: 20px;
-            min-width: 360px;
-            background: #fafafa;
-        }
-        .content form {
-            display: flex;
-            text-align: center;
-        }
-        .content form input {
-            font-size: 18px;
-            font-weight: lighter;
-            padding: 10px 20px;
-        }
-        .device {
-            padding: 10px 20px;
-            font-size: 18px;
-            font-weight: lighter;
-            border-bottom: 1px solid #dddddd;
-            background: #ffffff;
-            transition: background .2s;
-        }
-        .device:nth-child(even) {
-            background: #f4f4f4;
-        }
-        .device:hover {
-            box-shadow: 0 0 5px 0 rgba(0, 0, 0, 0.1);
-        }
-        .device div {
-            float: right;
-            display: inline;
-            color: #555555;
-            cursor: pointer;
-        }
-    </style>
+    <link rel="stylesheet" href="style.css">
+    <script type="application/javascript" src="script.js" defer></script>
 </head>
 <body>
-
 <div class="content">
     <h1>Devices</h1>
 
@@ -60,69 +15,9 @@
     </form>
 
     <h1></h1>
-    <div id="devices">
 
+    <div id="devices">
     </div>
 </div>
-
-<script>
-    let deviceNames = [];
-
-    load();
-
-    function add() {
-        let input = document.getElementById("device");
-        addDevice(input.value);
-    }
-
-    function addDevice(name, doSave) {
-        if (name.length > 0 && deviceNames.indexOf(name) === -1) {
-            let devices = document.getElementById("devices");
-            let device = render(
-                `<div class="device" id="${name}">${name}<div onclick="removeDevice('${name}')">x</div></div>`
-            );
-            deviceNames.push(name);
-            devices.appendChild(device);
-            if (doSave === undefined || doSave) {
-                save();
-            }
-        }
-    }
-
-    function removeDevice(name, doSave) {
-        let devices = document.getElementById("devices");
-        let device = document.getElementById(name);
-        devices.removeChild(device);
-        deviceNames = deviceNames.filter(d => d !== name);
-        if (doSave === undefined || doSave) {
-            save();
-        }
-    }
-
-    function render(html) {
-        let div = document.createElement("div");
-        div.innerHTML = html;
-        return div.firstChild;
-    }
-
-    function load() {
-        fetch("/config")
-                .catch(e => console.error(e))
-                .then(r => r.json())
-                .then(c => c.devices.forEach(d => addDevice(d, false)));
-    }
-
-    function save() {
-        let post = {
-            method: "POST",
-            headers: {"Content-Type": "application/json"},
-            body: JSON.stringify({devices: deviceNames})
-        };
-
-        fetch("/config", post)
-                .catch(e => console.error(e))
-                .then(() => console.log("saved"))
-    }
-</script>
 </body>
 </html>

@@ -20,35 +20,27 @@ type Config struct {
 	Devices []string `json:"devices"`
 }
 
-var (
-	noise = ""
-	cfg   = loadCfg()
-	lock  = sync.RWMutex{}
-)
-
 func main() {
-	host := host() // hostname/ip address
-	port := port() // server port
+	cfg := loadCfg()
+	host := host()
+	port := port(cfg.Port)
 	addr := fmt.Sprintf(`http://%s:%s`, host, port)
-	noise = addr + "/noise.mp3"
 	cast.Log("server running on: ", addr)
 	go serve(host, port)
 	go handleInput()
-	runLoop()
+	runLoop(addr + "/audio.mp3")
 }
 
-func runLoop() {
+func runLoop(audio string) {
 	for {
 		// read device names from config
-		lock.Lock()
-		devices := cfg.Devices
-		lock.Unlock()
+		cfg := loadCfg()
 
 		// start monitor task for each device
 		wg := sync.WaitGroup{}
-		for _, device := range devices {
+		for _, device := range cfg.Devices {
 			wg.Add(1)
-			go monitor(device, wg)
+			go monitor(device, audio, wg)
 		}
 
 		// wait until all tasks complete
@@ -64,7 +56,7 @@ func runLoop() {
 	}
 }
 
-func monitor(device string, wg sync.WaitGroup) {
+func monitor(device, audio string, wg sync.WaitGroup) {
 	defer wg.Done()
 
 	// get status from the device
@@ -76,7 +68,7 @@ func monitor(device string, wg sync.WaitGroup) {
 
 	// cast the noise file if nothing else is playing
 	if s == "no applications running" {
-		cast.Play(device, noise)
+		cast.Play(device, audio)
 	}
 }
 
@@ -94,10 +86,11 @@ func host() string {
 	return localAddr.IP.String()
 }
 
-func port() string {
-	lock.Lock()
-	defer lock.Unlock()
-	add := fmt.Sprintf("127.0.0.1:%s", cfg.Port)
+func port(port string) string {
+	if port == "" {
+		port = "0"
+	}
+	add := fmt.Sprintf("127.0.0.1:%s", port)
 	l, e := net.Listen("tcp", add)
 	if e != nil {
 		panic(e)
@@ -148,26 +141,28 @@ func serve(ip, port string) {
 func handleConfig(w http.ResponseWriter, r *http.Request) {
 	if r.Method == "GET" {
 		cast.Log("received config GET request")
-		lock.Lock()
-		defer lock.Unlock()
 		w.Header().Set("Content-Type", "application/json")
+		cfg := loadCfg()
 		e := json.NewEncoder(w).Encode(cfg)
 		if e != nil {
 			cast.Log(e)
 		}
-	} else if r.Method == "POST" && r.Header.Get("Content-Type") == "application/json" {
-		cast.Log("received config POST request")
-		lock.Lock()
-		defer lock.Unlock()
-		e := json.NewDecoder(r.Body).Decode(cfg)
-		if e != nil {
-			cast.Log(e)
-		} else {
-			saveCfg(cfg)
-		}
-	} else {
-		cast.Log("rejected ", r.Method, " request from ", r.RemoteAddr)
+		return
 	}
+
+	if r.Method == "POST" && r.Header.Get("Content-Type") == "application/json" {
+		cast.Log("received config POST request")
+		var cfg Config
+		e := json.NewDecoder(r.Body).Decode(&cfg)
+		if e == nil {
+			saveCfg(&cfg)
+		} else {
+			cast.Log(e)
+		}
+		return
+	}
+
+	cast.Log("rejected ", r.Method, " request from ", r.RemoteAddr)
 }
 
 func handleInput() {
