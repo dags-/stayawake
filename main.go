@@ -32,12 +32,14 @@ func main() {
 }
 
 func runLoop(audio string) {
+	i := time.Minute * 10
+
 	for {
 		// read device names from config
 		cfg := loadCfg()
 
 		// start monitor task for each device
-		wg := sync.WaitGroup{}
+		wg := &sync.WaitGroup{}
 		for _, device := range cfg.Devices {
 			wg.Add(1)
 			go monitor(device, audio, wg)
@@ -48,16 +50,16 @@ func runLoop(audio string) {
 		wg.Wait()
 
 		// sleep for remaining time
-		d := time.Since(t)
-		r := time.Minute - d
+		r := i - time.Since(t)
 		if r.Seconds() > 0 {
 			time.Sleep(r)
 		}
 	}
 }
 
-func monitor(device, audio string, wg sync.WaitGroup) {
+func monitor(device, audio string, wg *sync.WaitGroup) {
 	defer wg.Done()
+	cast.Log("monitoring ", device)
 
 	// get status from the device
 	s, e := cast.GetStatus(device)
@@ -68,14 +70,17 @@ func monitor(device, audio string, wg sync.WaitGroup) {
 
 	// cast the noise file if nothing else is playing
 	if s == "no applications running" {
-		cast.Play(device, audio)
+		e = cast.Play(device, audio)
+		if e != nil {
+			cast.Log(e)
+		}
 	}
 }
 
 func host() string {
 	n, e := os.Hostname()
 	if e == nil {
-		return n + ".local"
+		return n
 	}
 	conn, e := net.Dial("udp", "8.8.8.8:80")
 	if e != nil {

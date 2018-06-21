@@ -8,12 +8,22 @@ import (
 	"runtime"
 	"strings"
 	"time"
+	"os"
 )
 
 var (
 	// get the cast command depending on os/arch
 	command = getCommand()
 )
+
+func init() {
+	if runtime.GOOS != "windows" {
+		e := os.Chmod(command, os.ModePerm)
+		if e != nil {
+			panic(e)
+		}
+	}
+}
 
 func GetStatus(device string) (string, error) {
 	// make 3 attempts
@@ -22,7 +32,7 @@ func GetStatus(device string) (string, error) {
 		c := exec.Command(command, "--name", device, "status")
 		o, e := c.StdoutPipe()
 		if e != nil {
-			Log(e)
+			Log(e, " (device: ", device, " #", i, ")")
 			time.Sleep(5 * time.Second)
 			continue
 		}
@@ -40,7 +50,7 @@ func GetStatus(device string) (string, error) {
 		for s.Scan() {
 			line := strings.ToLower(s.Text())
 			if line == "connected" && s.Scan() {
-				return s.Text(), nil
+				return strings.ToLower(s.Text()), nil
 			}
 			if line == "timeout exceeded" {
 				Log(line, " (device: ", device, " #", i, ")")
@@ -75,7 +85,11 @@ func Play(device, mp3 string) (error) {
 	// quit the default media receiver app
 	Log("wakeup complete")
 	c = exec.Command(command, "--name", device, "quit")
-	return c.Start()
+	e = c.Start()
+	if e != nil {
+		return e
+	}
+	return c.Wait()
 }
 
 func Log(message ...interface{}) {
