@@ -25,11 +25,10 @@ func main() {
 	ip := ip()
 	host := hostname(ip)
 	port := port(cfg.Port)
-	addr := fmt.Sprintf(`http://%s:%s/`, host, port)
-	cast.Log("server running on: ", addr)
+	cast.Log("server running on: ", "http://", host, ":", port)
 	go serve(ip, port)
 	go handleInput()
-	runLoop(addr + "/audio.mp3")
+	runLoop(fmt.Sprintf(`http://%s:%s/audio.mp3`, ip, port))
 }
 
 func runLoop(audio string) {
