@@ -89,10 +89,6 @@ func hostname() string {
 }
 
 func ip() string {
-	n, e := os.Hostname()
-	if e == nil {
-		return n
-	}
 	conn, e := net.Dial("udp", "8.8.8.8:80")
 	if e != nil {
 		panic(e)
