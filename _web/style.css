@@ -22,6 +22,21 @@ body {
     font-weight: lighter;
     padding: 10px 20px;
 }
+.content form input[type="button"] {
+    color: #555555;
+    padding: 10px 20px;
+    font-size: 18px;
+    font-weight: lighter;
+    text-align: center;
+    border: 1px solid rgb(200, 200, 200);
+    background-color: white;
+}
+.content form input[type="button"]:hover  {
+    filter: brightness(0.95);
+}
+.content form input[type="button"]:active  {
+    filter: brightness(0.8);
+}
 .device {
     padding: 10px 20px;
     font-size: 18px;
