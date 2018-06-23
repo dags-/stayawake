@@ -22,11 +22,15 @@ type Config struct {
 
 func main() {
 	cfg := loadCfg()
-	host := host()
+	ip := ip()
+	host := hostname()
+	if host == "" {
+		host = ip
+	}
 	port := port(cfg.Port)
-	addr := fmt.Sprintf(`http://%s:%s`, host, port)
+	addr := fmt.Sprintf(`http://%s:%s/`, ip, port)
 	cast.Log("server running on: ", addr)
-	go serve(host, port)
+	go serve(ip, port)
 	go handleInput()
 	runLoop(addr + "/audio.mp3")
 }
@@ -77,7 +81,14 @@ func monitor(device, audio string, wg *sync.WaitGroup) {
 	}
 }
 
-func host() string {
+func hostname() string {
+	if n, e := os.Hostname(); e == nil {
+		return n
+	}
+	return ""
+}
+
+func ip() string {
 	n, e := os.Hostname()
 	if e == nil {
 		return n
