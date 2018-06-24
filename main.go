@@ -32,7 +32,7 @@ func main() {
 }
 
 func runLoop(audio string) {
-	i := time.Minute * 5
+	i := time.Minute * 10
 
 	for {
 		// read device names from config

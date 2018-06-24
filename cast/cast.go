@@ -63,12 +63,19 @@ func GetStatus(device string) (string, error) {
 
 func Play(device, mp3 string) (error) {
 	Log("casting wakeup noise")
+	if e := execSync(command, "--name", device, "volume", "0.2"); e != nil {
+		return e
+	}
+
+	time.Sleep(time.Second)
+
 	// execute play command: `cast --name <device> media play <mp3_address>
-	c := exec.Command(command, "--name", device, "media", "play", mp3)
-	e := c.Start()
+	if e := execSync(command, "--name", device, "media", "play", mp3); e != nil {
+		return e
+	}
 
 	// wait for audio to play a bit
-	time.Sleep(time.Second * 15)
+	time.Sleep(time.Second * 5)
 
 	// get the device status
 	s, e := GetStatus(device)
@@ -84,12 +91,20 @@ func Play(device, mp3 string) (error) {
 
 	// quit the default media receiver app
 	Log("wakeup complete")
-	c = exec.Command(command, "--name", device, "quit")
-	e = c.Start()
-	if e != nil {
+	if e := execSync(command, "--name", device, "quit"); e != nil {
 		return e
 	}
 
+	// reset volume
+	 return execSync(command, "--name", device, "volume", "0.75")
+}
+
+func execSync(cmd string, args ...string) error {
+	c := exec.Command(cmd, args...)
+	e := c.Start()
+	if e != nil {
+		return e
+	}
 	return c.Wait()
 }
 
