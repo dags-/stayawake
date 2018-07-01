@@ -31,10 +31,14 @@ type Instance struct {
 var (
 	lock      sync.RWMutex
 	cfg       *Config
-	instances  = make(map[string]*Instance)
+	instances = make(map[string]*Instance)
+	interval  time.Duration
+	timeout   time.Duration
 )
 
 func init() {
+	interval = time.Duration(time.Minute * 5)
+	timeout = time.Duration(time.Minute * 10)
 	install("play", "/cmd/cast", "github.com/barnybug/go-cast")
 	install("status", "", "github.com/vishen/go-chromecast")
 }
@@ -51,7 +55,6 @@ func main() {
 }
 
 func runLoop(audio string) {
-	i := time.Minute * 5
 	cfg := loadCfg()
 
 	for {
@@ -72,7 +75,7 @@ func runLoop(audio string) {
 		wg.Wait()
 
 		// sleep for remaining time
-		r := i - time.Since(t)
+		r := interval - time.Since(t)
 		if r.Seconds() > 0 {
 			time.Sleep(r)
 		}
@@ -93,14 +96,15 @@ func monitor(i *Instance, audio string, wg *sync.WaitGroup) {
 		if i.Idle == nil {
 			t := time.Now()
 			i.Idle = &t
+			i.Pause = nil
 			return
 		}
-		if time.Since(*i.Idle) > time.Duration(time.Minute*10) {
+		if time.Since(*i.Idle) > timeout {
 			i.Idle = nil
+			i.Pause = nil
 			e = i.Info.Play(audio)
 			if e != nil {
 				cast.Log(e)
-
 			}
 		}
 		return
@@ -109,10 +113,12 @@ func monitor(i *Instance, audio string, wg *sync.WaitGroup) {
 	if s.State == "paused" {
 		if i.Pause == nil {
 			t := time.Now()
+			i.Idle = nil
 			i.Pause = &t
 			return
 		}
-		if time.Since(*i.Pause) > time.Duration(time.Minute * 10) {
+		if time.Since(*i.Pause) > timeout {
+			i.Idle = nil
 			i.Pause = nil
 			e = i.Info.Play(audio)
 			if e != nil {
@@ -263,7 +269,7 @@ func install(name, exe, path string) {
 	c.Start()
 	c.Wait()
 
-	c = exec.Command("go", "build", "-o", f, path + exe)
+	c = exec.Command("go", "build", "-o", f, path+exe)
 	c.Start()
 	c.Wait()
 

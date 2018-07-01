@@ -13,8 +13,8 @@ func (info *DeviceInfo) Play(mp3 string) (error) {
 	if e := execSync(playCmd(), "--name", device, "volume", "0.2"); e != nil {
 		return e
 	}
-
 	time.Sleep(time.Second)
+
 
 	// execute play playCommand: `cast --name <device> media play <mp3_address>
 	if e := execSync(playCmd(), "--name", device, "media", "play", mp3); e != nil {
