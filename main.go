@@ -83,14 +83,6 @@ func monitor(i *Instance, audio string, wg *sync.WaitGroup) {
 	defer wg.Done()
 	cast.Log("monitoring ", (*i.Info)["deviceName"])
 
-	if true {
-		e := i.Info.Play(audio)
-		if e != nil {
-			cast.Log(e)
-		}
-		return
-	}
-
 	s, e := cast.GetStatus(*i.Info)
 	if e != nil {
 		cast.Log(e)
@@ -114,6 +106,10 @@ func monitor(i *Instance, audio string, wg *sync.WaitGroup) {
 		}
 		timer = i.Pause
 		i.Pause = nil
+	} else {
+		timer = nil
+		i.Pause = nil
+		i.Idle = nil
 	}
 
 	if timer != nil && time.Since(*timer) > time.Duration(time.Minute * 10) {

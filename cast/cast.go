@@ -29,9 +29,8 @@ func (info *DeviceInfo) Play(mp3 string) (error) {
 	if  e != nil {
 		return e
 	}
-
+	
 	if s.App != "none" {
-		fmt.Println(s.App)
 		return nil
 	}
 
