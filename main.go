@@ -89,35 +89,41 @@ func monitor(i *Instance, audio string, wg *sync.WaitGroup) {
 		return
 	}
 
-	var timer *time.Time
 	if s.State == "idle" {
 		if i.Idle == nil {
 			t := time.Now()
 			i.Idle = &t
 			return
 		}
-		timer = i.Idle
-		i.Idle = nil
-	} else if s.State == "paused" {
+		if time.Since(*i.Idle) > time.Duration(time.Minute*10) {
+			i.Idle = nil
+			e = i.Info.Play(audio)
+			if e != nil {
+				cast.Log(e)
+
+			}
+		}
+		return
+	}
+
+	if s.State == "paused" {
 		if i.Pause == nil {
 			t := time.Now()
 			i.Pause = &t
 			return
 		}
-		timer = i.Pause
-		i.Pause = nil
-	} else {
-		timer = nil
-		i.Pause = nil
-		i.Idle = nil
+		if time.Since(*i.Pause) > time.Duration(time.Minute * 10) {
+			i.Pause = nil
+			e = i.Info.Play(audio)
+			if e != nil {
+				cast.Log(e)
+			}
+		}
+		return
 	}
 
-	if timer != nil && time.Since(*timer) > time.Duration(time.Minute * 10) {
-		e = i.Info.Play(audio)
-		if e != nil {
-			cast.Log(e)
-		}
-	}
+	i.Pause = nil
+	i.Idle = nil
 }
 
 func hostname(ip string) string {
