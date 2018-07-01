@@ -13,6 +13,8 @@ import (
 	"time"
 
 	"github.com/dags-/stayawake/cast"
+	"os/exec"
+	"path/filepath"
 )
 
 type Config struct {
@@ -20,8 +22,25 @@ type Config struct {
 	Devices []string `json:"devices"`
 }
 
+type Instance struct {
+	Info  *cast.DeviceInfo
+	Pause *time.Time
+	Idle  *time.Time
+}
+
+var (
+	lock      sync.RWMutex
+	cfg       *Config
+	instances  = make(map[string]*Instance)
+)
+
+func init() {
+	install("play", "/cmd/cast", "github.com/barnybug/go-cast")
+	install("status", "", "github.com/vishen/go-chromecast")
+}
+
 func main() {
-	cfg := loadCfg()
+	cfg = loadCfg()
 	ip := ip()
 	host := hostname(ip)
 	port := port(cfg.Port)
@@ -32,17 +51,20 @@ func main() {
 }
 
 func runLoop(audio string) {
-	i := time.Minute * 10
+	i := time.Minute * 5
+	cfg := loadCfg()
 
 	for {
-		// read device names from config
-		cfg := loadCfg()
-
 		// start monitor task for each device
 		wg := &sync.WaitGroup{}
-		for _, device := range cfg.Devices {
+		for _, name := range cfg.Devices {
+			i, e := getInstance(name)
+			if e != nil {
+				cast.Log(e)
+				continue
+			}
 			wg.Add(1)
-			go monitor(device, audio, wg)
+			go monitor(i, audio, wg)
 		}
 
 		// wait until all tasks complete
@@ -57,20 +79,45 @@ func runLoop(audio string) {
 	}
 }
 
-func monitor(device, audio string, wg *sync.WaitGroup) {
+func monitor(i *Instance, audio string, wg *sync.WaitGroup) {
 	defer wg.Done()
-	cast.Log("monitoring ", device)
+	cast.Log("monitoring ", (*i.Info)["deviceName"])
 
-	// get status from the device
-	s, e := cast.GetStatus(device)
+	if true {
+		e := i.Info.Play(audio)
+		if e != nil {
+			cast.Log(e)
+		}
+		return
+	}
+
+	s, e := cast.GetStatus(*i.Info)
 	if e != nil {
 		cast.Log(e)
 		return
 	}
 
-	// cast the noise file if nothing else is playing
-	if s == "no applications running" {
-		e = cast.Play(device, audio)
+	var timer *time.Time
+	if s.State == "idle" {
+		if i.Idle == nil {
+			t := time.Now()
+			i.Idle = &t
+			return
+		}
+		timer = i.Idle
+		i.Idle = nil
+	} else if s.State == "paused" {
+		if i.Pause == nil {
+			t := time.Now()
+			i.Pause = &t
+			return
+		}
+		timer = i.Pause
+		i.Pause = nil
+	}
+
+	if timer != nil && time.Since(*timer) > time.Duration(time.Minute * 10) {
+		e = i.Info.Play(audio)
 		if e != nil {
 			cast.Log(e)
 		}
@@ -106,6 +153,23 @@ func port(port string) string {
 	defer l.Close()
 	parts := strings.Split(l.Addr().String(), ":")
 	return parts[1]
+}
+
+func getInstance(name string) (*Instance, error) {
+	lock.Lock()
+	defer lock.Unlock()
+	if d, ok := instances[name]; ok {
+		return d, nil
+	}
+
+	info, e := cast.GetDevice(name)
+	if e != nil {
+		return nil, e
+	}
+	cast.Log("got info for device: ", name)
+	d := &Instance{Info: info,}
+	instances[name] = d
+	return d, nil
 }
 
 func loadCfg() *Config {
@@ -147,10 +211,12 @@ func serve(ip, port string) {
 }
 
 func handleConfig(w http.ResponseWriter, r *http.Request) {
+	lock.Lock()
+	defer lock.Unlock()
+
 	if r.Method == "GET" {
 		cast.Log("received config GET request")
 		w.Header().Set("Content-Type", "application/json")
-		cfg := loadCfg()
 		e := json.NewEncoder(w).Encode(cfg)
 		if e != nil {
 			cast.Log(e)
@@ -181,4 +247,23 @@ func handleInput() {
 			os.Exit(0)
 		}
 	}
+}
+
+func install(name, exe, path string) {
+	f := filepath.Join("_bin", name)
+	if _, e := os.Stat(path); e == nil {
+		return
+	}
+
+	os.Mkdir("_bin", os.ModePerm)
+
+	c := exec.Command("go", "get", "-u", path)
+	c.Start()
+	c.Wait()
+
+	c = exec.Command("go", "build", "-o", f, path + exe)
+	c.Start()
+	c.Wait()
+
+	cast.Log("installed ", name)
 }
