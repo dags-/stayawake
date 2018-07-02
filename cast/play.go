@@ -7,7 +7,7 @@ import (
 
 func (d *Device) Play(mp3 string) (error) {
 	Log("casting wakeup noise")
-	if e := execSync(playCmd(), "--name", d.Name, "volume", "0.2"); e != nil {
+	if e := execSync(playCmd(), "--name", d.Name, "volume", "0.25"); e != nil {
 		return e
 	}
 	time.Sleep(time.Second)
@@ -19,7 +19,7 @@ func (d *Device) Play(mp3 string) (error) {
 	}
 
 	// wait for audio to play a bit
-	time.Sleep(time.Second * 2)
+	time.Sleep(time.Second * 3)
 
 	// get the device status
 	s, e := d.GetStatus()
@@ -38,7 +38,7 @@ func (d *Device) Play(mp3 string) (error) {
 	}
 
 	// reset volume
-	 return execSync(playCmd(), "--name", d.Name, "volume", "0.75")
+	 return execSync(playCmd(), "--name", d.Name, "volume", "0.5")
 }
 
 func execSync(cmd string, args ...string) error {

@@ -17,9 +17,9 @@ type Instance struct {
 var (
 	cfg       *Config
 	lock      sync.RWMutex
-	audio     = "audio.mp3"
-	timeout   = time.Duration(time.Minute * 8)
-	interval  = time.Duration(time.Minute * 5)
+	audio     string
+	timeout   = time.Duration(time.Minute * 5)
+	interval  = time.Duration(time.Minute * 6)
 	instances = make(map[string]*Instance)
 )
 
