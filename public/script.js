@@ -1,9 +1,15 @@
 let deviceNames = [];
 
 fetch("/config")
-    .catch(e => console.error(e))
-    .then(r => r.json())
-    .then(c => c.devices.forEach(d => addDevice(d, false)));
+    .catch(e = > console.error(e)
+)
+.
+then(r = > r.json()
+)
+.
+then(c = > c.devices.forEach(d = > addDevice(d, false)
+))
+;
 
 function add() {
     let input = document.getElementById("device");
@@ -28,7 +34,9 @@ function removeDevice(name, doSave) {
     let devices = document.getElementById("devices");
     let device = document.getElementById(name);
     devices.removeChild(device);
-    deviceNames = deviceNames.filter(d => d !== name);
+    deviceNames = deviceNames.filter(d = > d !== name
+)
+    ;
     if (doSave === undefined || doSave) {
         save();
     }
@@ -48,6 +56,9 @@ function save() {
     };
 
     fetch("/config", post)
-        .catch(e => console.error(e))
-        .then(() => console.log("saved"))
+        .catch(e = > console.error(e)
+)
+.
+    then(() = > console.log("saved")
+)
 }

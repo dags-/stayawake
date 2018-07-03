@@ -9,8 +9,8 @@ import (
 )
 
 type Device struct {
-	Name  string
-	UUID  string
+	Name string
+	UUID string
 }
 
 type Status struct {
@@ -45,8 +45,8 @@ func GetDevice(name string) (*Device, error) {
 			}
 
 			device := &Device{
-				Name:  props["deviceName"],
-				UUID:  props["uuid"],
+				Name: props["deviceName"],
+				UUID: props["uuid"],
 			}
 
 			// deviceName matches the name?

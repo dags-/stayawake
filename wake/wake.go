@@ -19,7 +19,7 @@ var (
 	lock      sync.RWMutex
 	audio     string
 	timeout   = time.Duration(time.Minute * 5)
-	interval  = time.Duration(time.Minute * 6)
+	interval  = time.Duration(time.Minute * 10)
 	instances = make(map[string]*Instance)
 )
 
@@ -38,6 +38,8 @@ func runLoop() {
 	cfg := loadCfg()
 
 	for {
+		t := time.Now()
+
 		// start monitor task for each device
 		wg := &sync.WaitGroup{}
 		for _, name := range cfg.Devices {
@@ -47,11 +49,10 @@ func runLoop() {
 				continue
 			}
 			wg.Add(1)
-			go i.monitor(wg)
+			go i.poll(wg)
 		}
 
 		// wait until all tasks complete
-		t := time.Now()
 		wg.Wait()
 
 		// sleep for remaining time
@@ -79,9 +80,9 @@ func instance(name string) (*Instance, error) {
 	return d, nil
 }
 
-func (i *Instance) monitor(wg *sync.WaitGroup) {
+func (i *Instance) poll(wg *sync.WaitGroup) {
 	defer wg.Done()
-	cast.Log("monitoring ", i.Device.Name)
+	cast.Log("polling ", i.Device.Name)
 
 	s, e := i.Device.GetStatus()
 	if e != nil {
@@ -98,6 +99,8 @@ func (i *Instance) monitor(wg *sync.WaitGroup) {
 		i.paused()
 		return
 	}
+
+	cast.Log("neither!? ", s.State, " - ", s.App)
 
 	i.Pause = nil
 	i.Idle = nil

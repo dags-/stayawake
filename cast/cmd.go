@@ -49,7 +49,7 @@ func statCmd() string {
 }
 
 func mustCommand(path string) string {
-	p, e :=  GetFile(path)
+	p, e := GetFile(path)
 	if e != nil {
 		panic(e)
 	}

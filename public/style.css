@@ -8,20 +8,24 @@ body {
     font-family: sans-serif;
     color: #555555;
 }
+
 .content {
     padding: 20px;
     min-width: 360px;
     background: #fafafa;
 }
+
 .content form {
     display: flex;
     text-align: center;
 }
+
 .content form input {
     font-size: 18px;
     font-weight: lighter;
     padding: 10px 20px;
 }
+
 .content form input[type="button"] {
     color: #555555;
     padding: 10px 20px;
@@ -31,12 +35,15 @@ body {
     border: 1px solid rgb(200, 200, 200);
     background-color: white;
 }
-.content form input[type="button"]:hover  {
+
+.content form input[type="button"]:hover {
     filter: brightness(0.95);
 }
-.content form input[type="button"]:active  {
+
+.content form input[type="button"]:active {
     filter: brightness(0.8);
 }
+
 .device {
     padding: 10px 20px;
     font-size: 18px;
@@ -45,12 +52,15 @@ body {
     background: #ffffff;
     transition: background .2s;
 }
+
 .device:nth-child(even) {
     background: #f4f4f4;
 }
+
 .device:hover {
     box-shadow: 0 0 5px 0 rgba(0, 0, 0, 0.1);
 }
+
 .device div {
     float: right;
     display: inline;
