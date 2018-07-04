@@ -90,7 +90,6 @@ LOOP:
 		select {
 		case c := <-service.Found():
 			if c.Name() == name {
-				logger.Printf("Found: %s at %s:%d", c.Name(), c.IP(), c.Port())
 				client = c
 				break LOOP
 			}

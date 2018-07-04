@@ -4,12 +4,14 @@ import (
 	"encoding/json"
 	"io/ioutil"
 	"os"
+	"strconv"
 )
 
 type Config struct {
-	Port    string   `json:"port"`
-	Debug   bool     `json:"debug"`
-	Devices []string `json:"devices"`
+	Port     string   `json:"port"`
+	Debug    bool     `json:"debug"`
+	Interval int      `json:"interval"`
+	Devices  []string `json:"devices"`
 }
 
 func loadCfg() *Config {
@@ -19,6 +21,8 @@ func loadCfg() *Config {
 	if e == nil {
 		e = json.Unmarshal(d, &c)
 		if e == nil {
+			ensure(&c)
+			saveCfg(&c)
 			return &c
 		}
 	}
@@ -38,5 +42,14 @@ func saveCfg(c *Config) {
 	e = ioutil.WriteFile("config.json", d, os.ModePerm)
 	if e != nil {
 		logger.Println(e)
+	}
+}
+
+func ensure(c *Config) {
+	if c.Interval < 1 {
+		c.Interval = 10
+	}
+	if _, e := strconv.Atoi(c.Port); e != nil {
+		c.Port = "0"
 	}
 }
