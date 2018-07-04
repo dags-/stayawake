@@ -14,7 +14,7 @@ var (
 	lock     sync.RWMutex
 	logger   *log.Logger
 	audio    string
-	volume   float64
+	volume   = 0.25
 	interval = time.Duration(time.Minute * 15)
 )
 
