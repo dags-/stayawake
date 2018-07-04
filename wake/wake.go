@@ -3,6 +3,7 @@ package wake
 import (
 	"fmt"
 	"log"
+	"os"
 	"sync"
 	"time"
 )
@@ -10,10 +11,15 @@ import (
 var (
 	cfg      *Config
 	lock     sync.RWMutex
+	logger   *log.Logger
 	audio    string
 	volume   float64
 	interval = time.Duration(time.Minute * 15)
 )
+
+func init() {
+	logger = log.New(os.Stdout, "", 0)
+}
 
 func Start() {
 	cfg = loadCfg()
@@ -48,13 +54,13 @@ func runLoop() {
 func poll(name string, wg *sync.WaitGroup) {
 	defer wg.Done()
 
-	log.Println("polling ", name, "...")
+	logger.Println(name, "polling...")
 	s, e := GetPlayerState(name)
 	if e != nil {
 		log.Println(e)
 		return
 	}
-	log.Println("state:", s)
+	logger.Println(name, "state:", s)
 
 	switch s {
 	case "BUFFERING":
@@ -63,15 +69,15 @@ func poll(name string, wg *sync.WaitGroup) {
 	case "IDLE":
 	case "PAUSED":
 	case "STOPPED":
-		log.Println("casting audio ", audio, "...")
+		logger.Println(name, "casting ", audio)
 		e := PlayAudio(name, audio, volume)
 		if e != nil {
-			log.Println(e)
+			logger.Println(name, e)
 		} else {
-			log.Print("cast complete")
+			logger.Print(name, "cast complete")
 		}
 		break
 	default:
-		log.Println("unknown state: ", s)
+		logger.Println(name, "unknown state:", s)
 	}
 }

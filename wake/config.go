@@ -3,7 +3,6 @@ package wake
 import (
 	"encoding/json"
 	"io/ioutil"
-	"log"
 	"os"
 )
 
@@ -13,7 +12,7 @@ type Config struct {
 }
 
 func loadCfg() *Config {
-	log.Println("loading config")
+	logger.Println("loading config")
 	var c Config
 	d, e := ioutil.ReadFile("config.json")
 	if e == nil {
@@ -22,21 +21,21 @@ func loadCfg() *Config {
 			return &c
 		}
 	}
-	log.Println(e)
+	logger.Println(e)
 	c = Config{Devices: []string{}, Port: "0"}
 	saveCfg(&c)
 	return &c
 }
 
 func saveCfg(c *Config) {
-	log.Println("saving config")
+	logger.Println("saving config")
 	d, e := json.MarshalIndent(c, "", "  ")
 	if e != nil {
-		log.Println(e)
+		logger.Println(e)
 		return
 	}
 	e = ioutil.WriteFile("config.json", d, os.ModePerm)
 	if e != nil {
-		log.Println(e)
+		logger.Println(e)
 	}
 }

@@ -3,7 +3,6 @@ package wake
 import (
 	"encoding/json"
 	"fmt"
-	"log"
 	"net"
 	"net/http"
 	"os"
@@ -55,26 +54,26 @@ func handleConfig(w http.ResponseWriter, r *http.Request) {
 	defer lock.Unlock()
 
 	if r.Method == "GET" {
-		log.Println("received config GET request")
+		logger.Println("received config GET request")
 		w.Header().Set("Content-Type", "application/json")
 		e := json.NewEncoder(w).Encode(cfg)
 		if e != nil {
-			log.Println(e)
+			logger.Println(e)
 		}
 		return
 	}
 
 	if r.Method == "POST" && r.Header.Get("Content-Type") == "application/json" {
-		log.Println("received config POST request")
+		logger.Println("received config POST request")
 		var cfg Config
 		e := json.NewDecoder(r.Body).Decode(&cfg)
 		if e == nil {
 			saveCfg(&cfg)
 		} else {
-			log.Println(e)
+			logger.Println(e)
 		}
 		return
 	}
 
-	log.Println("rejected", r.Method, "request from", r.RemoteAddr)
+	logger.Println("rejected", r.Method, "request from", r.RemoteAddr)
 }
