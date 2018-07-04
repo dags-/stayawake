@@ -3,12 +3,11 @@ package wake
 import (
 	"encoding/json"
 	"fmt"
+	"log"
 	"net"
 	"net/http"
 	"os"
 	"strings"
-
-	"github.com/dags-/stayawake/cast"
 )
 
 func serve(ip, port string) {
@@ -56,26 +55,26 @@ func handleConfig(w http.ResponseWriter, r *http.Request) {
 	defer lock.Unlock()
 
 	if r.Method == "GET" {
-		cast.Log("received config GET request")
+		log.Println("received config GET request")
 		w.Header().Set("Content-Type", "application/json")
 		e := json.NewEncoder(w).Encode(cfg)
 		if e != nil {
-			cast.Log(e)
+			log.Println(e)
 		}
 		return
 	}
 
 	if r.Method == "POST" && r.Header.Get("Content-Type") == "application/json" {
-		cast.Log("received config POST request")
+		log.Println("received config POST request")
 		var cfg Config
 		e := json.NewDecoder(r.Body).Decode(&cfg)
 		if e == nil {
 			saveCfg(&cfg)
 		} else {
-			cast.Log(e)
+			log.Println(e)
 		}
 		return
 	}
 
-	cast.Log("rejected ", r.Method, " request from ", r.RemoteAddr)
+	log.Println("rejected", r.Method, "request from", r.RemoteAddr)
 }

@@ -3,9 +3,8 @@ package wake
 import (
 	"encoding/json"
 	"io/ioutil"
+	"log"
 	"os"
-
-	"github.com/dags-/stayawake/cast"
 )
 
 type Config struct {
@@ -14,7 +13,7 @@ type Config struct {
 }
 
 func loadCfg() *Config {
-	cast.Log("loading config")
+	log.Println("loading config")
 	var c Config
 	d, e := ioutil.ReadFile("config.json")
 	if e == nil {
@@ -23,21 +22,21 @@ func loadCfg() *Config {
 			return &c
 		}
 	}
-	cast.Log(e)
+	log.Println(e)
 	c = Config{Devices: []string{}, Port: "0"}
 	saveCfg(&c)
 	return &c
 }
 
 func saveCfg(c *Config) {
-	cast.Log("saving config")
+	log.Println("saving config")
 	d, e := json.MarshalIndent(c, "", "  ")
 	if e != nil {
-		cast.Log(e)
+		log.Println(e)
 		return
 	}
 	e = ioutil.WriteFile("config.json", d, os.ModePerm)
 	if e != nil {
-		cast.Log(e)
+		log.Println(e)
 	}
 }
