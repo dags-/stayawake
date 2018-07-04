@@ -6,6 +6,7 @@ import (
 	"os"
 	"sync"
 	"time"
+	"errors"
 )
 
 var (
@@ -56,13 +57,14 @@ func runLoop() {
 
 func poll(name string, wg *sync.WaitGroup) {
 	defer wg.Done()
-
 	logger.Printf("(%s) polling...\n", name)
-	s, e := GetPlayerState(name)
+
+	s, e := getState(name, 5)
 	if e != nil {
-		log.Println(e)
+		logger.Printf("(%s) err: \n", e)
 		return
 	}
+
 	logger.Printf("(%s) state: %s\n", name, s)
 
 	switch s {
@@ -84,4 +86,17 @@ func poll(name string, wg *sync.WaitGroup) {
 		}
 		return
 	}
+}
+
+func getState(name string, attempts int) (string, error) {
+	for ; attempts > 0; attempts-- {
+		s, e := GetPlayerState(name)
+		if e != nil {
+			logger.Printf("(%s) err: \n", e)
+			time.Sleep(time.Second)
+			continue
+		}
+		return s, nil
+	}
+	return "", errors.New("unable to get state")
 }
