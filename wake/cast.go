@@ -5,10 +5,16 @@ import (
 
 	"github.com/barnybug/go-cast"
 	"github.com/barnybug/go-cast/controllers"
-		"golang.org/x/net/context"
+	"golang.org/x/net/context"
 
 	"github.com/barnybug/go-cast/discovery"
 )
+
+type silent struct{}
+
+func (w *silent) Write(data []byte) (int, error) {
+	return 0, nil
+}
 
 func PlayAudio(name, url string, vol float64) (error) {
 	ctx, cancel := context.WithTimeout(context.Background(), time.Duration(time.Second*5))

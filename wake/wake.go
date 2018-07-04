@@ -18,7 +18,7 @@ var (
 )
 
 func init() {
-	logger = log.New(os.Stdout, "", 0)
+	logger = log.New(os.Stdout, "", log.LstdFlags)
 }
 
 func Start() {
@@ -27,9 +27,12 @@ func Start() {
 	host := hostname(ip)
 	port := port(cfg.Port)
 	audio = fmt.Sprintf(`http://%s:%s/audio.mp3`, ip, port)
-	log.Println("server running on:", "http://", host, ":", port)
+	logger.Println("server running on:", "http://", host, ":", port)
 	go serve(ip, port)
 	go runLoop()
+	if !cfg.Debug {
+		log.SetOutput(&silent{})
+	}
 }
 
 func runLoop() {
@@ -54,30 +57,31 @@ func runLoop() {
 func poll(name string, wg *sync.WaitGroup) {
 	defer wg.Done()
 
-	logger.Println(name, "polling...")
+	logger.Printf("(%s) polling...\n", name)
 	s, e := GetPlayerState(name)
 	if e != nil {
 		log.Println(e)
 		return
 	}
-	logger.Println(name, "state:", s)
+	logger.Printf("(%s) state: %s\n", name, s)
 
 	switch s {
 	case "BUFFERING":
 	case "PLAYING":
 		return
 	case "IDLE":
+		fallthrough
 	case "PAUSED":
+		fallthrough
 	case "STOPPED":
-		logger.Println(name, "casting ", audio)
+		logger.Printf("(%s) casting: %s\n", name, audio)
 		e := PlayAudio(name, audio, volume)
 		if e != nil {
 			logger.Println(name, e)
+			logger.Printf("(%s) err: %s\n", name, e)
 		} else {
-			logger.Print(name, "cast complete")
+			logger.Printf("(%s) cast complete\n", name)
 		}
-		break
-	default:
-		logger.Println(name, "unknown state:", s)
+		return
 	}
 }

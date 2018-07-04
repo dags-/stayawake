@@ -8,6 +8,7 @@ import (
 
 type Config struct {
 	Port    string   `json:"port"`
+	Debug   bool     `json:"debug"`
 	Devices []string `json:"devices"`
 }
 
