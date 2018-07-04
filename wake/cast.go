@@ -26,7 +26,7 @@ func PlayAudio(name, url string, vol float64) (error) {
 	muted := false
 	volume := &controllers.Volume{Level: &vol, Muted: &muted}
 	if _, err = client.Receiver().SetVolume(ctx, volume); err != nil {
-		log.Println(err)
+		return err
 	}
 
 	item := controllers.MediaItem{
@@ -35,7 +35,6 @@ func PlayAudio(name, url string, vol float64) (error) {
 		ContentType: "audio/mpeg",
 	}
 
-	// load and auto-play url
 	if _, err = media.LoadMedia(ctx, item, 0, true, map[string]interface{}{}); err != nil {
 		return err
 	}

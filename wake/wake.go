@@ -47,13 +47,14 @@ func runLoop() {
 
 func poll(name string, wg *sync.WaitGroup) {
 	defer wg.Done()
-	log.Println("polling", name)
 
+	log.Println("polling ", name, "...")
 	s, e := GetPlayerState(name)
 	if e != nil {
 		log.Println(e)
 		return
 	}
+	log.Println("state:", s)
 
 	switch s {
 	case "BUFFERING":
@@ -62,9 +63,15 @@ func poll(name string, wg *sync.WaitGroup) {
 	case "IDLE":
 	case "PAUSED":
 	case "STOPPED":
-		PlayAudio(name, audio, volume)
+		log.Println("casting audio ", audio, "...")
+		e := PlayAudio(name, audio, volume)
+		if e != nil {
+			log.Println(e)
+		} else {
+			log.Print("cast complete")
+		}
 		break
 	default:
-		log.Println("unknown status: ", s)
+		log.Println("unknown state: ", s)
 	}
 }
