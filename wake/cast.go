@@ -46,19 +46,22 @@ func GetPlayerState(name string) (string, error) {
 	defer cancel()
 
 	// get client
-	client, media, err := getDevice(name, ctx)
+	client, err := connect(name, ctx)
 	if err != nil {
 		return "", err
 	}
 	defer client.Close()
 
 	// find media status
-	mediaStatus, err := media.GetStatus(ctx)
+	status, err := client.GetMediaStatus(ctx)
 	if err != nil {
+		if err.Error() == "no application" {
+			return "IDLE", nil
+		}
 		return "", err
 	}
 
-	for _, m := range mediaStatus.Status {
+	for _, m := range status {
 		return m.PlayerState, nil
 	}
 

@@ -24,10 +24,11 @@ func (d *device) poll(o *options, wg *sync.WaitGroup) {
 
 	s, e := getState(d.name, o.attempts)
 	if e != nil {
-		logger.Printf("(%s) poll err: %s", d.name, e)
+		logger.Printf("(%s) poll err: %s\n", d.name, e)
 		return
 	}
 
+	logger.Printf("(%s) status: %s\n", d.name, s)
 	d.processState(o, s)
 }
 
