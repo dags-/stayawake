@@ -8,10 +8,11 @@ import (
 )
 
 type Config struct {
-	Port     string   `json:"port"`
-	Debug    bool     `json:"debug"`
-	Interval int      `json:"interval"`
-	Devices  []string `json:"devices"`
+	Port         string   `json:"port"`
+	Debug        bool     `json:"debug"`
+	PollInterval int      `json:"poll_interval"`
+	CastInterval int      `json:"cast_interval"`
+	Devices      []string `json:"devices"`
 }
 
 func loadCfg() *Config {
@@ -46,8 +47,11 @@ func saveCfg(c *Config) {
 }
 
 func ensure(c *Config) {
-	if c.Interval < 1 {
-		c.Interval = 10
+	if c.PollInterval < 1 {
+		c.PollInterval = 4
+	}
+	if c.CastInterval < 1 {
+		c.CastInterval = 10
 	}
 	if _, e := strconv.Atoi(c.Port); e != nil {
 		c.Port = "0"

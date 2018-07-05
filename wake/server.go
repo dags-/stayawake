@@ -9,13 +9,42 @@ import (
 	"strings"
 )
 
-func serve(ip, port string) {
+func (m *manager) startServer(ip, port string) {
 	addr := fmt.Sprintf(`%s:%s`, ip, port)
 	fs := http.FileServer(http.Dir("public"))
-	m := http.NewServeMux()
-	m.HandleFunc("/config", handleConfig)
-	m.Handle("/", fs)
-	http.ListenAndServe(addr, m)
+	mux := http.NewServeMux()
+	mux.HandleFunc("/config", m.handleConfig)
+	mux.Handle("/", fs)
+	http.ListenAndServe(addr, mux)
+}
+
+func (m *manager) handleConfig(w http.ResponseWriter, r *http.Request) {
+	cfg := loadCfg()
+
+	if r.Method == "GET" {
+		logger.Println("received config GET request")
+		w.Header().Set("Content-Type", "application/json")
+		e := json.NewEncoder(w).Encode(cfg)
+		if e != nil {
+			logger.Println(e)
+		}
+		return
+	}
+
+	if r.Method == "POST" && r.Header.Get("Content-Type") == "application/json" {
+		logger.Println("received config POST request")
+		var cfg Config
+		e := json.NewDecoder(r.Body).Decode(&cfg)
+		if e == nil {
+			saveCfg(&cfg)
+			m.setDevices(cfg.Devices)
+		} else {
+			logger.Println(e)
+		}
+		return
+	}
+
+	logger.Println("rejected", r.Method, "request from", r.RemoteAddr)
 }
 
 func ip() string {
@@ -47,33 +76,4 @@ func hostname(ip string) string {
 		return n
 	}
 	return ip
-}
-
-func handleConfig(w http.ResponseWriter, r *http.Request) {
-	lock.Lock()
-	defer lock.Unlock()
-
-	if r.Method == "GET" {
-		logger.Println("received config GET request")
-		w.Header().Set("Content-Type", "application/json")
-		e := json.NewEncoder(w).Encode(cfg)
-		if e != nil {
-			logger.Println(e)
-		}
-		return
-	}
-
-	if r.Method == "POST" && r.Header.Get("Content-Type") == "application/json" {
-		logger.Println("received config POST request")
-		var cfg Config
-		e := json.NewDecoder(r.Body).Decode(&cfg)
-		if e == nil {
-			saveCfg(&cfg)
-		} else {
-			logger.Println(e)
-		}
-		return
-	}
-
-	logger.Println("rejected", r.Method, "request from", r.RemoteAddr)
 }
