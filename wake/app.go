@@ -36,7 +36,7 @@ func Start() {
 
 	options := &options{
 		audio:        audio,
-		volume:       0.4,
+		volume:       0.75,
 		attempts:     5,
 		castInterval: time.Duration(cfg.CastInterval) * time.Minute,
 		pollInterval: time.Duration(cfg.PollInterval) * time.Minute,

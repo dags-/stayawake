@@ -14,31 +14,23 @@ func PlayAudio(name, url string, vol float64) (error) {
 	ctx, cancel := context.WithTimeout(context.Background(), time.Duration(time.Second*5))
 	defer cancel()
 
-	// get client
-	client, media, err := getDevice(name, ctx)
+	client, err := connect(name, ctx)
 	if err != nil {
 		return err
 	}
 	defer client.Close()
 
-	// set volume
-	muted := false
-	volume := &controllers.Volume{Level: &vol, Muted: &muted}
-	if _, err = client.Receiver().SetVolume(ctx, volume); err != nil {
+	err = setVolume(client, ctx, vol, false)
+	if err != nil {
 		return err
 	}
 
-	item := controllers.MediaItem{
-		ContentId:   url,
-		StreamType:  "BUFFERED",
-		ContentType: "audio/mpeg",
-	}
-
-	if _, err = media.LoadMedia(ctx, item, 0, true, map[string]interface{}{}); err != nil {
+	err = playMedia(client, ctx, url)
+	if err != nil {
 		return err
 	}
 
-	return nil
+	return setVolume(client, ctx, 0.5, false)
 }
 
 func GetPlayerState(name string) (string, error) {
@@ -46,32 +38,50 @@ func GetPlayerState(name string) (string, error) {
 	defer cancel()
 
 	// get client
-	client, media, err := getDevice(name, ctx)
+	client, err := connect(name, ctx)
 	if err != nil {
 		return "", err
 	}
 	defer client.Close()
 
-	// find media status
-	mediaStatus, err := media.GetStatus(ctx)
+	return getStatus(client, ctx)
+}
+
+func setVolume(client *cast.Client, ctx context.Context, vol float64, muted bool) error {
+	volume := &controllers.Volume{Level: &vol, Muted: &muted}
+	_, err := client.Receiver().SetVolume(ctx, volume)
+	return err
+}
+
+func playMedia(client *cast.Client, ctx context.Context, url string) error {
+	media, err := client.Media(ctx)
 	if err != nil {
+		return err
+	}
+
+	audio := controllers.MediaItem{
+		ContentId:   url,
+		StreamType:  "BUFFERED",
+		ContentType: "audio/mpeg",
+	}
+
+	_, err = media.LoadMedia(ctx, audio, 0, true, map[string]interface{}{})
+	return err
+}
+
+func getStatus(client *cast.Client, ctx context.Context) (string, error) {
+	status, err := client.GetMediaStatus(ctx)
+	if err != nil {
+		if err.Error() == "no media" {
+			return "IDLE", nil
+		}
 		return "", err
 	}
 
-	for _, m := range mediaStatus.Status {
+	for _, m := range status {
 		return m.PlayerState, nil
 	}
-
 	return "IDLE", nil
-}
-
-func getDevice(name string, ctx context.Context) (*cast.Client, *controllers.MediaController, error) {
-	c, e := connect(name, ctx)
-	if e != nil || c == nil {
-		return nil, nil, e
-	}
-	m, e := c.Media(ctx)
-	return c, m, e
 }
 
 func connect(name string, ctx context.Context) (*cast.Client, error) {
